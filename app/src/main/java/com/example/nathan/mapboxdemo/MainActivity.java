@@ -32,12 +32,22 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Map;
 
+import io.nlopez.smartlocation.OnLocationUpdatedListener;
+import io.nlopez.smartlocation.SmartLocation;
+import io.nlopez.smartlocation.location.config.LocationAccuracy;
+import io.nlopez.smartlocation.location.config.LocationParams;
+import io.nlopez.smartlocation.location.providers.LocationGooglePlayServicesProvider;
+
 import static com.example.nathan.mapboxdemo.R.id.map;
 import static com.example.nathan.mapboxdemo.R.id.never;
 
-public class MainActivity extends AppCompatActivity implements LocationListener{
+public class MainActivity extends AppCompatActivity implements LocationListener, OnLocationUpdatedListener{
 
     private MapView mapView;
+
+    public ArrayList<LatLng> points = new ArrayList<LatLng>();
+
+    private LocationGooglePlayServicesProvider provider; // for smart location library
     
 
 
@@ -47,6 +57,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
 
         Mapbox.getInstance(this, getString(R.string.access_token));
         setContentView(R.layout.activity_main2);
+
+        startLocation();//start location
+
 
         //floating action button stuff
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -94,9 +107,9 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
 
                         CameraPosition position = new CameraPosition.Builder()
                                 .target(new LatLng(latLng)) // Sets the new camera position
-                                .zoom(20) // Sets the zoom
+                               // .zoom() // Sets the zoom
                                 .bearing(0) // Rotate the camera
-                                .tilt(15) // Set the camera tilt
+                                .tilt(0) // Set the camera tilt
                                 .build(); // Creates a CameraPosition from the builder
 
                         mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position), 3000);//sets the new camera position and animation time
@@ -212,6 +225,76 @@ public class MainActivity extends AppCompatActivity implements LocationListener{
     public void onProviderDisabled(String provider) {
 
     }
+
+
+    @Override
+    public void onLocationUpdated(final Location location) {
+
+        //below code updates the maplocation based upon new gps coordinates
+        mapView.getMapAsync(new OnMapReadyCallback() {
+            @Override
+            public void onMapReady(MapboxMap mapboxMap) {
+
+
+                CameraPosition position = new CameraPosition.Builder()
+                        .target(new LatLng(location.getLatitude(), location.getLongitude())) // Sets the new camera position
+                        .zoom(10) // Sets the zoom
+                        .bearing(0) // Rotate the camera
+                        .tilt(0) // Set the camera tilt
+                        .build(); // Creates a CameraPosition from the builder
+
+                mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position), 3000);//sets the new camera position and animation time
+
+                LatLng latLng = mapboxMap.getCameraPosition().target; //get lat and lon of center of screen
+
+                // Draw polyline on the map
+                points.add(latLng);
+
+                mapboxMap.addPolyline(new PolylineOptions()
+                        //.addAll(points)
+
+                        .addAll(points) // sets the lat and lon
+                        .color(Color.parseColor("#3bb2d0")) //color of the line
+                        .width(2)); // width of the line
+            }
+        });
+    }
+
+    private void startLocation() {
+
+        provider = new LocationGooglePlayServicesProvider();
+        provider.setCheckLocationSettings(true);
+
+        SmartLocation smartLocation = new SmartLocation.Builder(this).logging(true).build();
+
+        smartLocation.location(provider).start(this);
+        //smartLocation.activity().start(this);
+
+    }
+
+    private void startLocationListener() {
+
+        long mLocTrackingInterval = 1000 * 1; // 1 sec
+        float trackingDistance = 0;
+        LocationAccuracy trackingAccuracy = LocationAccuracy.HIGH;
+
+        LocationParams.Builder builder = new LocationParams.Builder()
+                .setAccuracy(trackingAccuracy)
+                .setDistance(trackingDistance)
+                .setInterval(mLocTrackingInterval);
+
+        SmartLocation.with(this)
+                .location()
+                .continuous()
+                .config(builder.build())
+                .start(new OnLocationUpdatedListener() {
+                    @Override
+                    public void onLocationUpdated(Location location) {
+                        //processLocation(location);
+                    }
+                });
+    }
+
 
 
 }
