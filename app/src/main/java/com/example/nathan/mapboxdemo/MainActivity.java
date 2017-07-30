@@ -262,18 +262,6 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
 
     private void startLocation() {
 
-        provider = new LocationGooglePlayServicesProvider();
-        provider.setCheckLocationSettings(true);
-
-        SmartLocation smartLocation = new SmartLocation.Builder(this).logging(true).build();
-
-        smartLocation.location(provider).start(this);
-        //smartLocation.activity().start(this);
-
-    }
-
-    private void startLocationListener() {
-
         long mLocTrackingInterval = 1000 * 1; // 1 sec
         float trackingDistance = 0;
         LocationAccuracy trackingAccuracy = LocationAccuracy.HIGH;
@@ -289,10 +277,47 @@ public class MainActivity extends AppCompatActivity implements LocationListener,
                 .config(builder.build())
                 .start(new OnLocationUpdatedListener() {
                     @Override
-                    public void onLocationUpdated(Location location) {
-                        //processLocation(location);
+                    public void onLocationUpdated(final Location location) {
+                        //below code updates the maplocation based upon new gps coordinates
+                        mapView.getMapAsync(new OnMapReadyCallback() {
+                            @Override
+                            public void onMapReady(MapboxMap mapboxMap) {
+
+
+                                CameraPosition position = new CameraPosition.Builder()
+                                        .target(new LatLng(location.getLatitude(), location.getLongitude())) // Sets the new camera position
+                                        //.zoom(10) // Sets the zoom
+                                        .bearing(0) // Rotate the camera
+                                        .tilt(0) // Set the camera tilt
+                                        .build(); // Creates a CameraPosition from the builder
+
+                                mapboxMap.animateCamera(CameraUpdateFactory.newCameraPosition(position), 3000);//sets the new camera position and animation time
+
+                                LatLng latLng = mapboxMap.getCameraPosition().target; //get lat and lon of center of screen
+
+                                // Draw polyline on the map
+                                LatLng gpsLatLon = new LatLng(location.getLatitude(),location.getLongitude(),location.getAltitude());
+                                points.add(gpsLatLon);
+
+                                mapboxMap.addPolyline(new PolylineOptions()
+                                        //.addAll(points)
+
+                                        .addAll(points) // sets the lat and lon
+                                        .color(Color.parseColor("#3bb2d0")) //color of the line
+                                        .width(2)); // width of the line
+                            }
+                        });
                     }
                 });
+
+//        provider = new LocationGooglePlayServicesProvider();
+//        provider.setCheckLocationSettings(true);
+//
+//        SmartLocation smartLocation = new SmartLocation.Builder(this).logging(true).build();
+//
+//        smartLocation.location(provider).start(this);
+//        //smartLocation.activity().start(this);
+
     }
 
 
